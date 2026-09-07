@@ -60,6 +60,15 @@ def q(tag):
 # ------------------------------------------------------------- sheet editing
 class Sheet:
     def __init__(self, xml_bytes):
+        # الحفاظ على تعريفات النطاقات الاسمية كما هي في الملف الأصلي.
+        # بدونها يعيد ElementTree تسمية البادئات (mc: -> ns1:) فتصبح البادئات
+        # المذكورة في mc:Ignorable غير معرّفة، فيعتبر Excel الورقة تالفة ويفرّغها.
+        head = xml_bytes[:6000].decode("utf-8", "ignore")
+        self.root_tag = re.search(r"<worksheet\b[^>]*>", head, re.S).group(0)
+        self.decls = re.findall(r'xmlns:([A-Za-z0-9_.-]+)="([^"]+)"', self.root_tag)
+        for prefix, uri in self.decls:
+            ET.register_namespace(prefix, uri)
+        ET.register_namespace("", NS)
         self.tree = ET.fromstring(xml_bytes)
         self.data = self.tree.find(q("sheetData"))
 
@@ -212,8 +221,22 @@ class Sheet:
     def tobytes(self):
         self.fix_spans()
         self.fix_dimension()
+        for prefix, uri in self.decls:
+            ET.register_namespace(prefix, uri)
+        ET.register_namespace("", NS)
+        txt = ET.tostring(self.tree, encoding="unicode")
+
+        # إعادة أي تعريف نطاق اسمي حذفه ElementTree لأنه غير مستخدم مباشرة
+        m = re.match(r"<worksheet\b[^>]*?>", txt, re.S)
+        tag = m.group(0)
+        present = set(re.findall(r'xmlns:([A-Za-z0-9_.-]+)=', tag))
+        extra = "".join(f' xmlns:{p}="{u}"' for p, u in self.decls if p not in present)
+        if extra:
+            tag = "<worksheet" + extra + tag[len("<worksheet"):]
+        txt = tag + txt[m.end():]
+
         return b'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n' + \
-            ET.tostring(self.tree, encoding="utf-8")
+            txt.encode("utf-8")
 
 
 # ------------------------------------------------------- block transformation
