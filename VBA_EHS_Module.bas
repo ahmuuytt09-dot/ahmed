@@ -111,8 +111,7 @@ Public Sub EHS_FormatObservation()
     End If
 LocalEngine:
     ' Formulas already on the sheet compute type/severity/CAPA.
-    ' Stamp a timestamp so the user sees VBA ran.
-    ws.Cells(r, 8).Value = "Converted " & Format(Now, "yyyy-mm-dd hh:nn")
+    ' A single success timestamp is stamped at Done (all paths).
 Done:
     ws.Cells(r, 8).Value = "Converted " & Format(Now, "yyyy-mm-dd hh:nn")
     ProtectSheet ws
@@ -280,7 +279,7 @@ Public Sub EHS_NewObservationID()
     ws.Cells(r, 2).Value = "OBS-" & Format(n, "000")
     ws.Cells(r, 3).Value = Date
     ws.Cells(r, 6).Value = "Open"
-    ws.Cells(r, r).Select
+    ws.Cells(r, 4).Select
     ProtectSheet ws
 End Sub
-)
+
