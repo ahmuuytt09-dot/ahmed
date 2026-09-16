@@ -50,12 +50,12 @@ All illustrations are AI-generated (no real individuals, sites or clients are de
 | 8 | `08_confined_space.jpg` | 28 | Right column + caption | Gas monitor, attendant, retrieval tripod at the entry | ✅ Delivered |
 | 9 | `09_hot_work.jpg` | 29 | Right column + caption | Fire watch, containment, 10 m clearance | ✅ Delivered |
 | 10 | `10_heat_stress.jpg` | 33 | Right column + caption | Shaded rest area, chilled water, rehydration — the Basrah reality | ✅ Delivered |
-| 11 | `11_emergency_assembly.jpg` | 38 | Right column + caption | Assembly point and head count after evacuation | ⏳ Pending |
-| 12 | `12_waste_management.jpg` | 36 | Right column + caption | Segregation at source and the bunded hazardous-waste store | ⏳ Pending |
-| 13 | `13_fire_extinguisher.jpg` | 37 | Right column + caption | The PASS method in practice, aimed at the base of the fire | ⏳ Pending |
-| 14 | `14_security_journey.jpg` | 43 | Right column + caption | Access control, vehicle search and the pedestrian route | ⏳ Pending |
+| 11 | `11_emergency_assembly.jpg` | 38 | Right column + caption | Assembly point and head count after evacuation | ✅ Delivered |
+| 12 | `12_waste_management.jpg` | 36 | Right column + caption | Segregation at source and the bunded hazardous-waste store | ✅ Delivered |
+| 13 | `13_fire_extinguisher.jpg` | 37 | Right column + caption | The PASS method in practice, aimed at the base of the fire | ✅ Delivered |
+| 14 | `14_security_journey.jpg` | 43 | Right column + caption | Access control, vehicle search and the pedestrian route | ✅ Delivered |
 
-### 2.1 Ready-to-use prompts for the remaining four images
+### 2.1 Generation prompts used for the final four images
 
 **11 — Emergency assembly point** (slide 38)
 > Wide 16:9 photograph of a site emergency evacuation assembly point: construction workers in high-visibility vests and white hard hats standing calmly in a marked muster area beside a tall green assembly point sign pole with a pictogram of three people walking toward a point, a supervisor with a clipboard conducting a head count, emergency vehicle access route kept clear in the background of a substation construction site. Professional EHS training illustration, clear daylight. No readable text, no lettering, no logos, no watermarks.
@@ -69,8 +69,13 @@ All illustrations are AI-generated (no real individuals, sites or clients are de
 **14 — Security and journey management** (slide 43)
 > Wide 16:9 photograph of a construction site main gate access control point: a security officer checking a vehicle access pass at a barrier with an under-vehicle inspection mirror trolley, a clearly marked pedestrian walkway separated from the vehicle lane, two employees in high-visibility vests showing their identity badges, and a site bus waiting at the gate in a desert setting. Professional EHS and security training illustration, bright daylight. No readable text, no lettering, no logos, no watermarks.
 
-**How to insert once generated:** save the file into `assets/img/` as a JPEG (max 1920 px wide), then add two lines to the slide entry in `deck_content.py`
-(`image="11_emergency_assembly.jpg", caption="…"`), change that slide's `layout` to `"image_right"`, and re-run `python3 build_deck.py`.
+**Status:** all four were generated, converted to JPEG (1920 px, quality 88, progressive) and wired into
+slides 38, 36, 37 and 43 — each slide's `layout` was changed to `"image_right"` with its own `caption`.
+**Asset register: 14 of 14 delivered.** Total payload of `assets/img/` is 3.1 MB.
+
+To add a further illustration later: save it into `assets/img/` as a JPEG (max 1920 px wide), add
+`image="…" , caption="…"` to that slide entry in `deck_content.py`, set `layout="image_right"`, and re-run
+`python3 build_deck.py`.
 
 ---
 
@@ -83,13 +88,32 @@ All illustrations are AI-generated (no real individuals, sites or clients are de
 | Primary text | Navy `#12263A` for titles; ink `#333F4C` for body; grey `#6B7A88` for subtitles and footers |
 | Emphasis | Siemens purple `#52177A` for the golden-rule / watch-out lines |
 | Table header | Navy fill, white bold text, alternating body rows `#F4F7FA` |
-| Typography | Titles 27 pt bold · subtitles 13.5 pt · body 15.5 pt (auto-shrinks to fit) · captions 10 pt · footers 8.5 pt |
+| Typography | Titles 27 pt bold (auto-shrinks to keep every title on one line, floor 21 pt) · subtitles 13.5 pt · body 15.5 pt (auto-shrinks to fit) · captions 10 pt · footers 8.5 pt |
+| Text layout | Hanging indent: the bullet marker sits in its own 16 pt column so wrapped lines align under the first word, not under the marker |
+| Fit engine | Every text block is measured before it is drawn (`Story.place`, DejaVu metrics) and its box is grown to fit, so no line is ever clipped; the same measurement drives both the PDF and the PPTX backend |
 | Logo lock-up | Siemens Energy top-right on a white clear-space panel; Al-Mial and BGC on the light band of the cover; clear space equal to the height of the "S" maintained around every mark |
 | Credits | `Prepared by: Ahmed Al-Mansoury \| EHS Manager – Siemens` on the cover and closing slide |
 | Document control | `KAZ-EHS-IND-001 · Rev. 02 · Restricted` in the footer of every slide, plus `Slide n of 48` |
 | Accessibility | No text inside images, sentence case where possible, ≥ 8.5 pt minimum type, colour never the only carrier of meaning |
 
 **Branding note (important):** the Siemens Energy brand mark is used on a Siemens Energy project deliverable prepared by the project EHS Manager, which is consistent with its intended purpose. Before the deck is published externally (Client / media / contractor websites), confirm the current brand-portal rules on logo clear space, the minimum size and the co-branding order with your Siemens Energy brand representative.
+
+---
+
+### 3.1 Automated pre-issue checks
+
+`build_deck.py` output is verified by a scripted QA pass before every issue. The current Rev. 02 build passes all of them:
+
+| Check | Method | Result |
+|---|---|---|
+| Page/body overflow | no body text block may end below y = 498 pt (the footer rule) | 0 slides |
+| Text collisions | no two rendered lines may overlap by more than 6 × 4 pt | 0 pairs |
+| Document control | `KAZ-EHS-IND-001` must appear on every content slide | 48 / 48 |
+| Slide titles | every title in `deck_content.py` must render on its slide | 48 / 48 |
+| Speaker notes | every slide must carry its delivery notes | 48 / 48 |
+| Illustrations | every `image=` entry must embed and show its caption | 14 / 14 |
+
+*Known cosmetic limitation:* the PDF backend uses DejaVu Sans, which applies the `fi` / `ff` / `fl` ligatures by default and MuPDF offers no CSS switch for them. The glyphs render correctly, but a literal search for `firefighting` may need the ligature-free spelling. The PPTX master uses Calibri and is unaffected.
 
 ---
 

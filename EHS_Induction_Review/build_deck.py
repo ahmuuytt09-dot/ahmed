@@ -118,6 +118,10 @@ class PptxCanvas(Canvas):
         sh.text_frame.text = ""
         return sh
 
+    def measure(self, runs, size, width, align="left", spacing=1.0, color=INK,
+                bold=False, italic=False, ceiling=600.0):
+        return _story_height(runs, size, width, align, spacing, color, bold, italic, ceiling)
+
     def text(self, x, y, w, h, runs, size=14, color=INK, bold=False, align="left",
              valign="top", spacing=1.0, italic=False):
         from pptx.util import Pt
@@ -168,6 +172,41 @@ FONT_CSS = """
 """
 
 
+def _runs_html_static(runs, size, color, bold, italic, align, spacing):
+    """Same markup the PDF backend produces, usable without a canvas instance."""
+    items = runs if isinstance(runs, list) else [(runs, {})]
+    parts = []
+    for text, style in items:
+        t = _html.escape(text).replace("\n", "<br/>")
+        t = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", t)
+        st = f'font-size:{style.get("size", size)}pt;'
+        if style.get("bold", bold): st += "font-weight:bold;"
+        if style.get("italic", italic): st += "font-style:italic;"
+        col = style.get("color", color)
+        st += f'color:#{"".join(f"{v:02X}" for v in col)};'
+        parts.append(f'<span style="{st}">{t}</span>')
+    return (f'<div style="font-family:dm;line-height:{spacing};text-align:{align};'
+            f'font-variant-ligatures:none">' + "".join(parts) + "</div>")
+
+
+def _story_height(runs, size, width, align, spacing, color, bold, italic, ceiling=600.0):
+    """Lay text out with MuPDF and return the height it needs (DejaVu metrics).
+
+    DejaVu is wider than the Calibri used by the PPTX backend, so using this for
+    both backends errs on the generous side - boxes grow, never overlap.
+    """
+    key = (repr(runs), size, round(width, 1), align, round(spacing, 2), color, bold, italic)
+    if key in _MEASURE_CACHE:
+        return _MEASURE_CACHE[key]
+    import pymupdf
+    html = _runs_html_static(runs, size, color, bold, italic, align, spacing)
+    story = pymupdf.Story(html=html, user_css=FONT_CSS, archive=_font_archive())
+    filled = story.place(pymupdf.Rect(0, 0, width, ceiling))[1]
+    out = max(0.0, (filled[3] - filled[1]) - 24.0)
+    _MEASURE_CACHE[key] = out
+    return out
+
+
 def _font_archive():
     """Zip archive of the TTFs used by the PDF backend (numbers/bold render correctly)."""
     global _ARCHIVE
@@ -216,12 +255,21 @@ class PdfCanvas(Canvas):
             col = style.get("color", color)
             s += f'color:#{"".join(f"{v:02X}" for v in col)};'
             parts.append(f'<span style="{s}">{t}</span>')
-        return (f'<div style="font-family:dm;line-height:{spacing};text-align:{align}">'
+        return (f'<div style="font-family:dm;line-height:{spacing};text-align:{align};'
+                f'font-variant-ligatures:none">'
                 + "".join(parts) + "</div>")
 
+    def measure(self, runs, size, width, align="left", spacing=1.0, color=INK,
+                bold=False, italic=False, ceiling=600.0):
+        """Height (pt) the run list needs at this width - see _story_height()."""
+        return _story_height(runs, size, width, align, spacing, color, bold, italic, ceiling)
+
     def text(self, x, y, w, h, runs, size=14, color=INK, bold=False, align="left",
-             valign="top", spacing=1.0, italic=False):
+             valign="top", spacing=1.0, italic=False, autofit=True):
         import pymupdf
+        if autofit:
+            need = self.measure(runs, size, w, align, spacing, color, bold, italic)
+            h = max(h, need + 4.0)
         html = self._runs_html(runs, size, color, bold, italic, align, spacing)
         box = pymupdf.Rect(x, y, x + w, y + h)
         for scale in (1.0, 0.96, 0.92, 0.88, 0.84, 0.8, 0.76, 0.72):
@@ -244,16 +292,20 @@ FOOTER = f"{C.DOC_NO} · {C.REV} · Management & Staff EHS Induction · Restrict
 
 
 def _runs_for_bullet(text, level, size):
-    """Return (runs, indent, effective size) for one content line."""
+    """Return (marker, marker styled, text runs, indent, effective size) for one line.
+
+    The marker is drawn in its own narrow column so that wrapped text aligns
+    under the first word (hanging indent) instead of under the marker.
+    """
     if level == 0:
-        return ([("▪  ", {"color": TEAL, "bold": True, "size": size}),
-                 (text, {"color": INK, "size": size})], 0, size)
+        return ("▪", {"color": TEAL, "bold": True}, [(text, {"color": INK})], 0, size)
     if level == 1:
-        return ([("•  ", {"color": GREY, "bold": True, "size": size - 1}),
-                 (text, {"color": INK, "size": size - 1})], 16, size - 1)
-    return ([("", {}), (text, {"color": PURPLE, "bold": True, "size": size - 1})], 0, size - 1)
+        return ("•", {"color": GREY, "bold": True}, [(text, {"color": INK})], 18, size - 1)
+    return ("",  {}, [(text, {"color": PURPLE, "bold": True})], 0, size - 1)
 
 
+MARKER_W = 16.0
+_MEASURE_CACHE = {}      # width of the marker column
 def _layout_bullets(bullets, size, width, x=72, y0=132, leading=1.30, gap=7.0, gap_sub=4.0):
     """Estimate the laid-out lines: returns (entries, bottom_y).
 
@@ -261,29 +313,31 @@ def _layout_bullets(bullets, size, width, x=72, y0=132, leading=1.30, gap=7.0, g
     """
     entries, y = [], y0
     for level, text in bullets:
-        runs, indent, eff = _runs_for_bullet(text, level, size)
-        usable = width - indent - 2
+        marker, mstyle, runs, indent, eff = _runs_for_bullet(text, level, size)
+        lead = MARKER_W if marker else 0.0
+        usable = width - indent - lead - 2
         cpl = max(12, int(usable / (0.545 * eff)))
         lines = max(1, -(-len(text) // cpl))
         h = lines * eff * leading
-        entries.append((runs, indent, eff, y, h))
+        entries.append((marker, mstyle, runs, indent, eff, y, h))
         y += h + (gap_sub if level else gap)
     return entries, y
 
 
-def render_bullets(cv, s, size=15.5, width=860, bottom=492):
+def render_bullets(cv, s, size=15.5, width=860, bottom=492, x=72, y0=132):
     """Draw bullets, shrinking the type size until everything fits above the footer."""
-    chosen = None
-    for sz in [size, size - 0.5, size - 1, size - 1.5, size - 2, size - 2.5, size - 3]:
-        entries, bottom_y = _layout_bullets(s["bullets"], sz, width)
+    entries = None
+    for sz in [size - i * 0.5 for i in range(7)]:
+        entries, bottom_y = _layout_bullets(s["bullets"], sz, width, x=x, y0=y0)
         if bottom_y <= bottom:
-            chosen = entries
             break
-    if chosen is None:
-        chosen = entries                                  # last attempt
-    for runs, indent, eff, y, h in chosen:
-        cv.text(72 + indent, y, width - indent, h + 2, runs, size=eff, spacing=1.2)
-    return chosen[-1][3] + chosen[-1][4]
+    for marker, mstyle, runs, indent, eff, y, h in entries:
+        if marker:
+            cv.text(x + indent, y + 0.5, MARKER_W, h, marker, size=eff, spacing=1.2, **mstyle)
+        left = x + indent + (MARKER_W if marker else 0.0)
+        cv.text(left, y, width - indent - (MARKER_W if marker else 0.0), h + 2, runs,
+                size=eff, spacing=1.2)
+    return entries[-1][5] + entries[-1][6]
 
 
 def _table_height(t, widths, scale):
@@ -302,14 +356,22 @@ def render_slide(cv, s, n, total):
 
     if layout in ("bullets", "image_right", "table"):
         cv.rect(0, 0, CANVAS_W, 6, fill=TEAL)                     # top accent
-        cv.text(72, 40, 700, 34, s["title"], size=27, bold=True, color=NAVY)
+        tts = 27.0
+        th = cv.measure(s["title"], tts, 700, bold=True, spacing=1.15)
+        while th > 34 and tts > 21.0:                             # keep every title to one line
+            tts -= 1.0
+            th = cv.measure(s["title"], tts, 700, bold=True, spacing=1.15)
+        cv.text(72, 40, 700, th + 6, s["title"], size=tts, bold=True, color=NAVY, spacing=1.15)
+        sub_y = 40 + th + 9
         if s.get("sub"):
-            cv.text(72, 76, 700, 22, s["sub"], size=13.5, color=GREY)
-        cv.line(72, 108, 168, 108, color=TEAL, width=2.2)
+            cv.text(72, sub_y, 700, 22, s["sub"], size=13.5, color=GREY)
+        rule_y = min(108.0, sub_y + 34)
+        cv.line(72, rule_y, 168, rule_y, color=TEAL, width=2.2)
+        body_top = max(132.0, rule_y + 24)
 
         if layout == "table":
             t = s["table"]
-            x0, y0, tw = 72, 148, 816
+            x0, y0, tw = 72, max(148.0, body_top + 16), 816
             widths = [tw * w for w in t["widths"]]
             row_h_head = 34
             cv.rect(x0, y0, tw, row_h_head, fill=NAVY)
@@ -338,17 +400,18 @@ def render_slide(cv, s, n, total):
             cv.rect(x0, y0, tw, y - y0, fill=None, line=(0xC3, 0xCE, 0xD8), line_w=0.8)
 
         elif layout == "image_right":
-            render_bullets(cv, s, size=14.5, width=530, bottom=492)
-            ix, iy, iw = 632, 132, 256
+            render_bullets(cv, s, size=14.5, width=530, bottom=492, y0=body_top)
+            ix, iy, iw = 632, body_top, 256
             ih = 268
             cv.image(img(s["image"]), ix, iy, iw, ih)
             cv.rect(ix, iy, iw, ih, fill=None, line=(0xD5, 0xDD, 0xE4), line_w=0.8)
             if s.get("caption"):
-                cv.rect(ix, iy + ih, iw, 34, fill=LIGHT)
-                cv.text(ix + 8, iy + ih + 8, iw - 16, 20, s["caption"], size=10, color=NAVY,
-                        align="center", italic=False)
+                cap_h = 30 if len(s["caption"]) <= 42 else 44
+                cv.rect(ix, iy + ih, iw, cap_h, fill=LIGHT)
+                cv.text(ix + 8, iy + ih + 5, iw - 16, cap_h - 10, s["caption"], size=10,
+                        color=NAVY, align="center", spacing=1.15)
         else:
-            render_bullets(cv, s, size=15.5, width=816, bottom=492)
+            render_bullets(cv, s, size=15.5, width=816, bottom=492, y0=body_top)
 
     elif layout == "cover":
         cv.rect(0, 0, CANVAS_W, CANVAS_H, fill=NAVY)
@@ -377,15 +440,23 @@ def render_slide(cv, s, n, total):
         cv.rect(0, 0, CANVAS_W, 6, fill=TEAL)
         cv.rect(684, 24, 252, 80, fill=WHITE)
         cv.image(logo("siemens_energy.png"), 692, 30, 236, 68)
-        cv.text(72, 190, 820, 44, s["title"], size=36, bold=True, color=WHITE)
-        cv.text(72, 244, 820, 26, s["sub"], size=17, color=(0x9F, 0xD8, 0xD8))
-        y = 300
+        ts = 36
+        th = cv.measure(s["title"], ts, 820, spacing=1.15, bold=True)
+        while th > 95 and ts > 24:                   # keep the closing headline to two lines max
+            ts -= 2
+            th = cv.measure(s["title"], ts, 820, spacing=1.15, bold=True)
+        cv.text(72, 170, 820, th + 5, s["title"], size=ts, bold=True, color=WHITE, spacing=1.15)
+        cv.text(72, 170 + th + 12, 820, 30, s["sub"], size=17, color=(0x9F, 0xD8, 0xD8), spacing=1.15)
+        y, last = 170 + th + 60, 170 + th + 60
         for level, text in s["bullets"]:
-            cv.text(72, y, 820, 30, text, size=14, color=(0xDD, 0xE5, 0xEC))
-            y += 34
-        cv.rect(72, 400, 816, 40, fill=(0x1B, 0x35, 0x4C))
-        cv.text(84, 410, 792, 22, C.PREPARED_BY, size=13, bold=True, color=WHITE)
-        cv.text(72, 470, 816, 30, "Zero Harm — every person, every task, every day.",
+            bh = cv.measure(text, 14, 820, spacing=1.2)
+            cv.text(72, y, 820, bh + 4, text, size=14, color=(0xDD, 0xE5, 0xEC), spacing=1.2)
+            y += bh + 16
+            last = y
+        band = min(max(404.0, last + 14), 428.0)
+        cv.rect(72, band, 816, 40, fill=(0x1B, 0x35, 0x4C))
+        cv.text(84, band + 10, 792, 24, C.PREPARED_BY, size=13, bold=True, color=WHITE)
+        cv.text(72, band + 56, 816, 30, "No task is so urgent that it cannot be done safely.",
                 size=13, color=(0x9F, 0xD8, 0xD8))
         cv.image(logo("almial.png"), 72, 508, 120, 27)
         return

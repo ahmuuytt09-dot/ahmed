@@ -294,7 +294,7 @@ dict(layout="image_right", title="Electrical Safety Rules", sub="The golden rule
               (0, "Never work on live equipment unless formally authorised and only under an Electrical Hot Work / Commissioning Permit."),
               (2, "GOLDEN RULE: ISOLATE — LOCK OUT — TAG OUT — TEST BEFORE TOUCH.")],
      image="04_arc_flash_ppe.jpg",
-     caption="Arc-rated PPE and a marked approach boundary",
+     caption="Arc-rated PPE and approach boundary",
      notes="This is the highest-risk topic of the project. Slow down here and check understanding with questions."),
 
 # ---------------------------------------------------------------- 23. arc flash & distances
@@ -330,7 +330,7 @@ dict(layout="image_right", title="Work at Height", sub="Fall protection from 1.8
               (0, "Ladders: short-duration work only, secured, three points of contact, no loads carried."),
               (0, "Barricade the area below, tether tools, protect openings and edges, and never work at several levels without protection.")],
      image="05_work_at_height.jpg",
-     caption="100% tie-off to a certified anchor point",
+     caption="100% tie-off to certified anchor",
      notes="Ask who has a valid working-at-height certificate. Verify harness inspection records."),
 
 # ---------------------------------------------------------------- 26. lifting
@@ -343,7 +343,7 @@ dict(layout="image_right", title="Lifting Operations", sub="Every lift is planne
               (0, "No lifting when wind exceeds 32 km/h or in poor visibility."),
               (0, "Taglines for load control; the banksman is the only person who signals the operator.")],
      image="06_lifting_operation.jpg",
-     caption="Barricaded exclusion zone · taglines · banksman control",
+     caption="Exclusion zone · taglines · banksman",
      notes="Lifting is a major hazard on this project because of the transformer and steel structure erection. "
            "Confirm the wind limit with the project lifting procedure."),
 
@@ -357,7 +357,7 @@ dict(layout="image_right", title="Excavation and Trenching", sub="Permit require
               (0, "Inspect after rain or any ground movement; never enter an unprotected trench."),
               (0, "A competent banksman controls plant movement around the excavation.")],
      image="07_excavation.jpg",
-     caption="Shoring · spoil setback · barriers · access ladder",
+     caption="Shoring · barriers · access ladder",
      notes="Highlight that excavations can also be confined spaces depending on risk assessment — but not "
            "automatically."),
 
@@ -370,7 +370,7 @@ dict(layout="image_right", title="Confined Space Entry", sub="Permit · gas test
               (0, "Never enter to rescue without breathing apparatus and the rescue team — most confined-space fatalities are would-be rescuers."),
               (0, "Classification as a confined space is based on risk assessment of the actual conditions.")],
      image="08_confined_space.jpg",
-     caption="Gas monitoring · attendant · retrieval equipment",
+     caption="Gas monitoring · attendant · tripod",
      notes="Emphasise the rescue rule: the instinct to help is the biggest killer. Call the rescue team."),
 
 # ---------------------------------------------------------------- 29. hot work
@@ -466,18 +466,20 @@ dict(layout="bullets", title="Environmental Protection", sub="Prevent pollution 
      notes="Explain where spill kits and SDS are kept, and how the electronic substance register is used."),
 
 # ---------------------------------------------------------------- 36. waste
-dict(layout="bullets", title="Waste Management", sub="Segregate at source — every day",
+dict(layout="image_right", title="Waste Management", sub="Segregate at source — every day",
      bullets=[(0, "Segregate waste: general · recyclable (metal, cable, paper, plastic) · hazardous · construction and demolition waste."),
               (0, "Hazardous waste (oils, filters, batteries, chemicals, e-waste) is stored in labelled, covered, bunded areas."),
               (0, "Hazardous waste leaves site only with MOTAT records and a licensed transporter."),
               (0, "Never burn waste, never mix hazardous with general waste, never dump into trenches or open ground."),
               (0, "Material and waste removal requires a Material Gate Pass."),
               (0, "Keep waste areas tidy, marked and away from drains; report overflowing or damaged bins.")],
+     image="12_waste_management.jpg",
+     caption="Segregated bins · bunded store",
      notes="Show the actual bin colours and locations on site. Ask each supervisor to confirm their crews know "
            "where the hazardous waste store is."),
 
 # ---------------------------------------------------------------- 37. fire
-dict(layout="bullets", title="Fire Safety and Firefighting", sub="Classes, extinguishers and the PASS method",
+dict(layout="image_right", title="Fire Safety and Firefighting", sub="Classes, extinguishers and the PASS method",
      bullets=[(0, "Class A — wood, paper, cloth, rubber, plastics → water or foam (DCP is acceptable but less effective)."),
               (0, "Class B — gasoline, kerosene, paint, propane → foam, DCP, CO2."),
               (0, "Class C — energised electrical equipment → CO2 or clean agent, plus de-energise the supply. Never use water."),
@@ -486,11 +488,13 @@ dict(layout="bullets", title="Fire Safety and Firefighting", sub="Classes, extin
               (0, "PASS method: Pull the pin · Aim at the base of the fire · Squeeze the handle · Sweep side to side."),
               (0, "For CO2 extinguishers hold the insulated horn, never the metal parts."),
               (0, "Only fight a small fire if you are trained and have a clear escape route. Otherwise raise the alarm and evacuate. Always alarm first.")],
+     image="13_fire_extinguisher.jpg",
+     caption="Aim at the base · keep an escape route",
      notes="Correct the previous deck's error: Class D requires special metal powder, not DCP. Never use water "
            "on energised electrical equipment."),
 
 # ---------------------------------------------------------------- 38. evacuation
-dict(layout="bullets", title="Emergency Response and Evacuation", sub="Alarm · assembly · head count",
+dict(layout="image_right", title="Emergency Response and Evacuation", sub="Alarm · assembly · head count",
      bullets=[(0, "Alarm signals: continuous siren = evacuate · intermittent = stand by · all-clear = return to work."),
               (0, "On evacuation: stop the job, isolate your equipment, proceed to the nearest assembly point."),
               (0, "Report to your area marshal for the head count; report any missing person immediately."),
@@ -498,6 +502,8 @@ dict(layout="bullets", title="Emergency Response and Evacuation", sub="Alarm · 
               (0, "Do not leave or return to the area until instructed by the emergency controller."),
               (0, "For security incidents (threat, intrusion, civil disturbance) follow the same assembly principle and the security team's instructions."),
               (0, "Fire wardens sweep their areas, including visitors and subcontractor crews.")],
+     image="11_emergency_assembly.jpg",
+     caption="Assembly point · roll call · clear routes",
      notes="Confirm the assembly point locations and the identity of area marshals for the audience's areas."),
 
 # ---------------------------------------------------------------- 39. emergency classification
@@ -555,7 +561,7 @@ dict(layout="bullets", title="Learning from Incidents", sub="Every event makes t
      notes="Show one recent lesson learned from the project or from Siemens Energy safety alerts."),
 
 # ---------------------------------------------------------------- 43. security
-dict(layout="bullets", title="Security and Access Control", sub="Everyone is searched — everyone is protected",
+dict(layout="image_right", title="Security and Access Control", sub="Everyone is searched — everyone is protected",
      bullets=[(0, "Site and camps are protected by the Iraqi Police and site security; persons, belongings, vehicles and deliveries may be searched on entry and exit."),
               (0, "Wear your Site ID / Gate Pass visibly at all times; access without it is refused."),
               (0, "Visitors: pre-approval 24 hours in advance, photo ID deposited at the gate, escorted by a host at all times; no work, no plant operation, no photography."),
@@ -563,6 +569,8 @@ dict(layout="bullets", title="Security and Access Control", sub="Everyone is sea
               (0, "Lost or damaged ID card must be reported; a replacement fee applies."),
               (0, "Security personnel are authorised to carry weapons — cooperate calmly and follow their instructions."),
               (0, "Never resist or interfere with security checks; the minimum age for site access is 18 years.")],
+     image="14_security_journey.jpg",
+     caption="Access control · vehicle search",
      notes="Cover the visitor process and the material gate pass. Security incidents follow the same reporting "
            "route as EHS incidents."),
 
@@ -626,8 +634,8 @@ dict(layout="closing", title="Everyone Goes Home Safely — Every Day",
            "acknowledgement signature."),
 ]
 
-# visual assets still to be produced (image generation limit reached this session)
-PENDING_VISUALS = [
+# visual asset register - every illustration is now delivered
+VISUAL_REGISTER = [
     ("Assembly point / head count", "11_emergency_assembly.jpg",
      "Site emergency assembly point: workers in high-visibility vests and hard hats standing in a marked muster "
      "area beside a green assembly-point sign pole, a supervisor with a clipboard conducting a head count, "
