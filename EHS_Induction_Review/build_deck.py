@@ -351,23 +351,85 @@ def _table_height(t, widths, scale):
     return total
 
 
+
+# ------------------------------------------------------------------ structure
+def build_flow():
+    """Expand C.SLIDES into the final running order, inserting chapter dividers.
+
+    Every content slide is tagged with its chapter so the header and footer can
+    label it without duplicating the structure in two places.
+    """
+    starts = {c["starts_at"]: c for c in C.CHAPTERS}
+    out, current = [], None
+    for s in C.SLIDES:
+        if s["title"] in starts:
+            current = starts[s["title"]]
+            out.append(dict(layout="divider", chapter=current, title=current["name"],
+                            notes=f"Chapter {current['no']} — {current['name']}. "
+                                  f"{current['blurb']} This chapter covers: "
+                                  f"{', '.join(current['topics'])}."))
+        item = dict(s)
+        item["_chapter"] = current
+        out.append(item)
+
+    # cross references such as "see slide {{slide:Emergency Contacts}}" are resolved
+    # against the final running order, so inserting a slide can never leave a stale number
+    number = {}
+    for i, it in enumerate(out, 1):
+        number.setdefault(it["title"], i)
+
+    def fix(t):
+        return re.sub(r"\{\{slide:(.+?)\}\}", lambda m: str(number.get(m.group(1), "?")), t)
+
+    for it in out:
+        for key in ("title", "sub", "caption", "notes"):
+            if it.get(key):
+                it[key] = fix(it[key])
+        if it.get("bullets"):
+            it["bullets"] = [(lvl, fix(t)) for lvl, t in it["bullets"]]
+        t = it.get("table")
+        if t:
+            t["head"] = [fix(c) for c in t["head"]]
+            t["rows"] = [[fix(c) for c in row] for row in t["rows"]]
+    return out
+
+
+def render_footer(cv, s, n, total):
+    """Document control, chapter and page number - identical on every slide."""
+    cv.line(72, 500, 98, 500, color=TEAL, width=2.4)
+    cv.line(98, 500, 888, 500, color=(0xD5, 0xDD, 0xE4), width=0.8)
+    cv.text(72, 508, 430, 18, FOOTER, size=8.5, color=GREY)
+    ch = s.get("_chapter")
+    if ch:
+        cv.text(420, 508, 330, 18, f"{ch['no']} · {ch['name']}", size=8.5,
+                color=GREY, align="center")
+    cv.text(700, 508, 188, 18, f"Slide {n} of {total}", size=8.5, color=GREY, align="right")
+
+
 def render_slide(cv, s, n, total):
     layout = s["layout"]
 
     if layout in ("bullets", "image_right", "table"):
         cv.rect(0, 0, CANVAS_W, 6, fill=TEAL)                     # top accent
+        cv.image(logo("siemens_energy.png"), 788, 30, 100, 31)     # brand mark, top right
+        ch = s.get("_chapter")
+        if ch:
+            cv.text(72, 28, 690, 15, f"CHAPTER {ch['no']}  ·  {ch['name'].upper()}",
+                    size=8.5, bold=True, color=TEAL)
         tts = 27.0
         th = cv.measure(s["title"], tts, 700, bold=True, spacing=1.15)
         while th > 34 and tts > 21.0:                             # keep every title to one line
             tts -= 1.0
             th = cv.measure(s["title"], tts, 700, bold=True, spacing=1.15)
-        cv.text(72, 40, 700, th + 6, s["title"], size=tts, bold=True, color=NAVY, spacing=1.15)
-        sub_y = 40 + th + 9
+        title_y = 46.0 if ch else 40.0
+        cv.text(72, title_y, 700, th + 6, s["title"], size=tts, bold=True, color=NAVY, spacing=1.15)
+        sub_y = title_y + th + 9
         if s.get("sub"):
             cv.text(72, sub_y, 700, 22, s["sub"], size=13.5, color=GREY)
-        rule_y = min(108.0, sub_y + 34)
-        cv.line(72, rule_y, 168, rule_y, color=TEAL, width=2.2)
-        body_top = max(132.0, rule_y + 24)
+        rule_y = min(112.0, sub_y + 34)
+        cv.line(72, rule_y, 168, rule_y, color=TEAL, width=2.4)
+        cv.line(168, rule_y + 0.9, 888, rule_y + 0.9, color=(0xD5, 0xDD, 0xE4), width=0.9)
+        body_top = max(134.0, rule_y + 26)
 
         if layout == "table":
             t = s["table"]
@@ -403,8 +465,19 @@ def render_slide(cv, s, n, total):
             render_bullets(cv, s, size=14.5, width=530, bottom=492, y0=body_top)
             ix, iy, iw = 632, body_top, 256
             ih = 268
-            cv.image(img(s["image"]), ix, iy, iw, ih)
-            cv.rect(ix, iy, iw, ih, fill=None, line=(0xD5, 0xDD, 0xE4), line_w=0.8)
+            if s.get("image"):
+                cv.image(img(s["image"]), ix, iy, iw, ih)
+                cv.rect(ix, iy, iw, ih, fill=None, line=(0xD5, 0xDD, 0xE4), line_w=0.8)
+            else:
+                # reserved slot: the site photograph is dropped in from PowerPoint
+                cv.rect(ix, iy, iw, ih, fill=LIGHT, line=(0xB9, 0xC6, 0xD1), line_w=1.0)
+                cv.rect(ix + 88, iy + 104, 80, 58, fill=None, line=(0x9F, 0xB2, 0xC2), line_w=1.4)
+                cv.rect(ix + 96, iy + 112, 64, 42, fill=(0xE7, 0xEE, 0xF3), line=None)
+                cv.text(ix + 20, iy + 176, iw - 40, 20, "INSERT SITE PHOTOGRAPH",
+                        size=9.5, bold=True, color=NAVY, align="center")
+                cv.text(ix + 20, iy + 194, iw - 40, 32,
+                        "Right-click the frame in PowerPoint\nthen choose Change Picture",
+                        size=8.5, color=GREY, align="center", spacing=1.3)
             if s.get("caption"):
                 cap_h = 30 if len(s["caption"]) <= 42 else 44
                 cv.rect(ix, iy + ih, iw, cap_h, fill=LIGHT)
@@ -413,26 +486,89 @@ def render_slide(cv, s, n, total):
         else:
             render_bullets(cv, s, size=15.5, width=816, bottom=492, y0=body_top)
 
-    elif layout == "cover":
+    elif layout == "divider":
+        ch = s["chapter"]
         cv.rect(0, 0, CANVAS_W, CANVAS_H, fill=NAVY)
-        cv.image(img(s["image"]), 0, 0, CANVAS_W, CANVAS_H * 0.52)
-        cv.rect(0, CANVAS_H * 0.52 - 2, CANVAS_W, 3, fill=TEAL)
-        # logo lock-up with clear space: brand owner top-right, partners on the light band
-        cv.rect(668, 16, 264, 86, fill=WHITE)
-        cv.image(logo("siemens_energy.png"), 676, 22, 248, 74)
-        cv.rect(72, 300, 700, 4, fill=TEAL)
-        cv.text(72, 320, 800, 46, C.TITLE, size=40, bold=True, color=WHITE)
-        cv.text(72, 372, 800, 26, C.PROJECT, size=19, color=(0x9F, 0xD8, 0xD8))
-        cv.text(72, 404, 800, 22, C.SITE, size=13, color=(0xC9, 0xD4, 0xDE))
-        cv.text(72, 430, 800, 20, C.CLIENT + "   ·   " + C.CONTRACTOR, size=12, color=(0xC9, 0xD4, 0xDE))
-        cv.rect(72, 462, 816, 34, fill=(0x1B, 0x35, 0x4C))
-        cv.text(84, 470, 792, 20, C.PREPARED_BY, size=13, bold=True, color=WHITE)
-        cv.text(72, 505, 500, 18, f"{C.DOC_NO} · {C.REV} · For review and approval", size=9.5,
-                color=(0x8F, 0xA3, 0xB5))
-        cv.text(500, 505, 388, 18, "Restricted · © Siemens Energy · Siemens Energy is a trademark licensed by Siemens AG",
-                size=7.5, color=(0x8F, 0xA3, 0xB5), align="right")
-        cv.image(logo("almial.png"), 76, 208, 168, 38)
-        cv.image(logo("bgc.png"), 268, 196, 66, 62)
+        cv.rect(0, 0, CANVAS_W, 6, fill=TEAL)
+        cv.rect(0, 6, 6, CANVAS_H - 6, fill=TEAL)                 # spine
+        cv.rect(676, 24, 260, 82, fill=WHITE)
+        cv.image(logo("siemens_energy.png"), 684, 30, 244, 74)
+        cv.text(96, 128, 300, 150, ch["no"], size=120, bold=True, color=(0x18, 0x38, 0x51),
+                spacing=1.0)
+        nsize = 32.0
+        nh = cv.measure(ch["name"], nsize, 760, bold=True, spacing=1.1)
+        while nh > 40 and nsize > 24:                 # keep the chapter title on one line
+            nsize -= 1.0
+            nh = cv.measure(ch["name"], nsize, 760, bold=True, spacing=1.1)
+        cv.text(96, 286, 760, nh + 6, ch["name"], size=nsize, bold=True, color=WHITE, spacing=1.1)
+        cv.rect(96, 336, 96, 3, fill=TEAL)
+        cv.text(96, 352, 720, 26, ch["blurb"], size=14.5, color=(0x9F, 0xD8, 0xD8), spacing=1.2)
+        cv.text(96, 396, 780, 46, "  ·  ".join(ch["topics"]), size=11.5,
+                color=(0x8F, 0xA8, 0xBC), spacing=1.35)
+        cv.text(96, 468, 500, 20, f"{C.DOC_NO} · {C.REV} · Restricted", size=9,
+                color=(0x6C, 0x83, 0x99))
+        cv.text(600, 468, 276, 20, f"Slide {n} of {total}", size=9,
+                color=(0x6C, 0x83, 0x99), align="right")
+        return
+
+    elif layout == "contents":
+        cv.rect(0, 0, CANVAS_W, 6, fill=TEAL)
+        cv.image(logo("siemens_energy.png"), 788, 30, 100, 31)
+        cv.text(72, 28, 690, 15, "COURSE STRUCTURE", size=8.5, bold=True, color=TEAL)
+        cv.text(72, 46, 700, 34, s["title"], size=27, bold=True, color=NAVY)
+        cv.text(72, 84, 700, 22, s["sub"], size=13.5, color=GREY)
+        cv.line(72, 112, 168, 112, color=TEAL, width=2.4)
+        cv.line(168, 112.9, 888, 112.9, color=(0xD5, 0xDD, 0xE4), width=0.9)
+        gap_x, gap_y = 18, 12
+        cw = (816 - gap_x) / 2
+        chh = (338 - 2 * gap_y) / 3
+        for k, ch in enumerate(C.CHAPTERS):
+            col, row = k % 2, k // 2
+            x = 72 + col * (cw + gap_x)
+            y = 138 + row * (chh + gap_y)
+            cv.rect(x, y, cw, chh, fill=LIGHT, line=(0xD5, 0xDD, 0xE4), line_w=0.9)
+            cv.rect(x, y, 3.5, chh, fill=TEAL)
+            cv.text(x + 16, y + 13, 44, 26, ch["no"], size=21, bold=True, color=TEAL)
+            nh = cv.measure(ch["name"], 12.5, cw - 78, bold=True, spacing=1.2)
+            cv.text(x + 62, y + 13, cw - 78, nh + 4, ch["name"], size=12.5, bold=True,
+                    color=NAVY, spacing=1.2)
+            by = y + 15 + max(nh, 20) + 4
+            cv.text(x + 62, by, cw - 78, chh - (by - y) - 8, ch["blurb"], size=9.5, color=GREY,
+                    spacing=1.25)
+        render_footer(cv, s, n, total)
+        return
+
+    elif layout == "cover":
+        cv.image(img(s["image"]), 0, 0, CANVAS_W, CANVAS_H)
+        cv.rect(0, 0, CANVAS_W, 6, fill=TEAL)
+        cv.rect(668, 22, 268, 88, fill=WHITE)                     # brand mark, clear space
+        cv.image(logo("siemens_energy.png"), 676, 28, 252, 76)
+
+        cv.rect(72, 282, 96, 4, fill=TEAL)
+        ts = 40.0
+        th = cv.measure(C.TITLE, ts, 816, bold=True, spacing=1.1)
+        while th > 52 and ts > 30:
+            ts -= 2
+            th = cv.measure(C.TITLE, ts, 816, bold=True, spacing=1.1)
+        cv.text(72, 300, 816, th + 6, C.TITLE, size=ts, bold=True, color=WHITE, spacing=1.1)
+        y = 300 + th + 12
+        cv.text(72, y, 816, 26, C.PROJECT, size=19, color=(0x9F, 0xD8, 0xD8))
+        y += 30
+        cv.text(72, y, 816, 20, C.SITE, size=12.5, color=(0xC9, 0xD4, 0xDE))
+        y += 22
+        cv.text(72, y, 816, 20, C.CLIENT + "   ·   " + C.CONTRACTOR, size=11.5,
+                color=(0xC9, 0xD4, 0xDE))
+        y += 21
+        cv.text(72, y, 816, 20, C.SUBCONTRACTOR, size=11.5, color=(0xC9, 0xD4, 0xDE))
+
+        cv.rect(72, 456, 816, 34, fill=(0x12, 0x2A, 0x40))
+        cv.rect(72, 456, 4, 34, fill=TEAL)
+        cv.text(86, 464, 790, 20, C.PREPARED_BY, size=13, bold=True, color=WHITE)
+        cv.text(72, 502, 500, 18, f"{C.DOC_NO} · {C.REV} · For review and approval", size=9.5,
+                color=(0x9A, 0xAD, 0xBE))
+        cv.text(500, 502, 388, 18,
+                "Restricted · © Siemens Energy · Siemens Energy is a trademark licensed by Siemens AG",
+                size=7.5, color=(0x9A, 0xAD, 0xBE), align="right")
         return
 
     elif layout == "closing":
@@ -458,13 +594,12 @@ def render_slide(cv, s, n, total):
         cv.text(84, band + 10, 792, 24, C.PREPARED_BY, size=13, bold=True, color=WHITE)
         cv.text(72, band + 56, 816, 30, "No task is so urgent that it cannot be done safely.",
                 size=13, color=(0x9F, 0xD8, 0xD8))
-        cv.image(logo("almial.png"), 72, 508, 120, 27)
+        cv.text(72, 508, 816, 18, f"{C.DOC_NO} · {C.REV} · Restricted   ·   "
+                f"{C.SUBCONTRACTOR}", size=8.5, color=(0x7C, 0x93, 0xA8))
         return
 
     # footer for all content slides
-    cv.line(72, 500, 888, 500, color=(0xD5, 0xDD, 0xE4), width=0.8)
-    cv.text(72, 508, 620, 18, FOOTER, size=8.5, color=GREY)
-    cv.text(700, 508, 188, 18, f"Slide {n} of {total}", size=8.5, color=GREY, align="right")
+    render_footer(cv, s, n, total)
 
 
 def render_section_header(cv, s):
@@ -478,8 +613,9 @@ def build_pptx(path):
     prs = Presentation()
     prs.slide_width, prs.slide_height = Pt(CANVAS_W), Pt(CANVAS_H)
     blank = prs.slide_layouts[6]
-    total = len(C.SLIDES)
-    for i, s in enumerate(C.SLIDES, 1):
+    items = build_flow()
+    total = len(items)
+    for i, s in enumerate(items, 1):
         slide = prs.slides.add_slide(blank)
         render_slide(PptxCanvas(slide, prs), s, i, total)
         if s.get("notes"):
@@ -491,8 +627,9 @@ def build_pptx(path):
 def build_pdf(path):
     import pymupdf
     doc = pymupdf.open()
-    total = len(C.SLIDES)
-    for i, s in enumerate(C.SLIDES, 1):
+    items = build_flow()
+    total = len(items)
+    for i, s in enumerate(items, 1):
         page = doc.new_page(width=CANVAS_W, height=CANVAS_H)
         render_slide(PdfCanvas(page), s, i, total)
     doc.save(path, garbage=3, deflate=True)

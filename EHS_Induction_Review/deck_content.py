@@ -24,7 +24,45 @@ TITLE = "Management & Staff EHS Induction"
 PROJECT = "KAZ Power Plant Upgrade Project"
 SITE = "Khor Al-Zubair Gas Turbine Power Plant · Basrah, Iraq"
 CLIENT = "Client: Ministry of Electricity (MoE) & Basrah Gas Company (BGC)"
+SUBCONTRACTOR = "Subcontractor: Al-Mial Company"
 CONTRACTOR = "Principal Contractor: Siemens Energy"
+
+
+# ---------------------------------------------------------------------------
+# Course structure - six chapters.  A divider slide is generated before the
+# slide named in "starts_at", and every slide after it carries its chapter in
+# the header, so the deck reads like a corporate training course.
+# ---------------------------------------------------------------------------
+CHAPTERS = [
+    dict(no="01", name="Introduction and Objectives",
+         blurb="How this session runs, what you will learn and what is recorded.",
+         topics=["Session format", "Learning objectives", "Validity", "Assessment"],
+         starts_at="How This Session Runs"),
+    dict(no="02", name="EHS Leadership and Responsibilities",
+         blurb="The Siemens EHS target and who is accountable for what on this site.",
+         topics=["Zero Harm", "EHS Target", "Leadership", "Everyone", "Contractors"],
+         starts_at="Siemens EHS Target — Our Vision"),
+    dict(no="03", name="The Project, the Site and Daily Rules",
+         blurb="Where you are working, how the site is organised and the rules that always apply.",
+         topics=["Project scope", "Site layout", "Base camp", "EHS organisation",
+                 "General rules", "Stop Work Authority", "Risk assessment", "Daily routine"],
+         starts_at="The Project"),
+    dict(no="04", name="Permit to Work and Electrical Safety",
+         blurb="The control system for hazardous work and the rules that keep the plant safe.",
+         topics=["Permit to Work", "Lock-Out / Tag-Out", "Electrical rules", "Arc flash",
+                 "Live plant"],
+         starts_at="Permit to Work (1)"),
+    dict(no="05", name="High-Risk Activities and Occupational Health",
+         blurb="The activities that cause the most serious injuries and how each one is controlled.",
+         topics=["Work at height", "Lifting", "Excavation", "Confined space", "Hot work",
+                 "Tools", "Manual handling", "PPE", "Heat stress", "First aid"],
+         starts_at="Work at Height"),
+    dict(no="06", name="Environment, Emergency and Security",
+         blurb="Protecting the environment, responding to emergencies, security and the consequences of breaking the rules.",
+         topics=["Environment", "Waste", "Fire", "Emergency", "Incident reporting",
+                 "Security", "Driving", "Penalties"],
+         starts_at="Environmental Protection"),
+]
 
 SLIDES = [
 
@@ -40,26 +78,14 @@ dict(layout="bullets", title="How This Session Runs", sub="Emergency instruction
               (0, "Mobile phones on silent — keep your phone available for emergencies."),
               (0, "Smoking is prohibited except in the designated smoking area, and never in red / restricted zones."),
               (0, "Duration: approx. 75 minutes, including the knowledge check and questions."),
-              (2, "Emergency numbers are on slide 39 — know them before you leave this room.")],
+              (2, "Emergency numbers are on slide {{slide:Emergency Contacts}} — know them before you leave this room.")],
      notes="Read the emergency arrangements of the training venue aloud. Confirm the assembly point "
            "location and the site emergency line before starting the content."),
 
 # ---------------------------------------------------------------- 3. contents
-dict(layout="bullets", title="Contents", sub="What we will cover",
-     bullets=[(0, "1. Siemens EHS target, Zero Harm policy and who is responsible"),
-              (0, "2. Project description, site layout and the EHS organisation"),
-              (0, "3. General site rules, Stop Work Authority and daily safety routine"),
-              (0, "4. Risk management — risk assessment, SJA, LMRA and toolbox talks"),
-              (0, "5. Permit to Work and Lock-Out / Tag-Out (LOTO)"),
-              (0, "6. Electrical safety, arc flash and safe approach distances"),
-              (0, "7. High-risk activities — height, lifting, excavation, confined space, hot work, tools"),
-              (0, "8. PPE, health, heat stress and first aid"),
-              (0, "9. Environment, waste, chemicals and fire safety"),
-              (0, "10. Emergency response, incident reporting, security and driving"),
-              (0, "11. Violations and penalties, knowledge check and induction card")],
-     notes="Use the agenda to set expectations; tell participants to ask questions at any point."),
+dict(layout="contents", title="Contents", sub="Six chapters — about 75 minutes, including the knowledge check",
+     notes="Walk through the six chapters quickly. Point out that the operators' own rule set is issued separately and that the knowledge check comes at the end."),
 
-# ---------------------------------------------------------------- 4. objectives
 dict(layout="bullets", title="Learning Objectives", sub="At the end of this induction you will be able to:",
      bullets=[(0, "State the Siemens EHS target and the Zero Harm policy, and explain what it means for your work."),
               (0, "Describe your personal responsibilities and the authority you hold to stop unsafe work."),
@@ -174,6 +200,20 @@ dict(layout="bullets", title="Site Layout and Emergency Facilities", sub="Know y
            "nearest assembly point after the session, if practical."),
 
 # ---------------------------------------------------------------- 13. organisation
+dict(layout="image_right", title="Base Camp and Site Offices", sub="The main office, the camp and the facilities you will use",
+     bullets=[
+         (0, "**Main office block** — project management, EHS office, document control, meeting rooms and the site clinic."),
+         (0, "**Base camp** — accommodation, canteen, prayer room, laundry and recreation areas. Camp rules apply at all times."),
+         (0, "**Camp and office safety:** keep escape routes and extinguishers clear; no cooking, no smoking and no unauthorised electrical appliances inside rooms or offices."),
+         (0, "**Utilities** — potable water points, generators and UPS areas, waste collection points and the sewage / grey-water system."),
+         (0, "**Housekeeping** — bins are provided in every block; report damage, leaks, pests or a faulty air conditioner to the camp supervisor immediately."),
+         (0, "**Transport** — only approved site buses and drivers; report to the camp marshal before boarding and never leave site without authorisation."),
+         (0, "**Emergency at the camp** — the camp assembly point is marked, and the clinic, first aiders and security gate are manned at all times."),
+     ],
+     image=None,
+     caption="Base camp and main office — insert site photograph",
+     notes="Insert the approved photograph of the base camp / main office before issuing this deck (right-click the placeholder and choose Change Picture). Walk the group through the layout: main office, clinic, canteen, laundry and the camp assembly point. Confirm the camp supervisor's name and the camp emergency number during the session."),
+
 dict(layout="bullets", title="Project EHS Organisation", sub="Who is responsible for what",
      bullets=[(0, "Project Director / Site Manager — overall responsibility for EHS performance of the project."),
               (0, "Siemens Energy EHS Manager in Projects (EHSMIP) — governance, audits, verification and stop-work authority."),
@@ -191,7 +231,7 @@ dict(layout="bullets", title="General Site Rules (1)", sub="Applies from the mom
               (0, "No work without a valid Permit to Work; no work without EHS supervision."),
               (0, "Complete an LMRA before every task and attend the daily toolbox talk."),
               (0, "Read and understand the risk assessment and method statement for your task — ask if anything is unclear."),
-              (0, "Wear the mandatory minimum PPE at all times (slide 31)."),
+              (0, "Wear the mandatory minimum PPE at all times (slide {{slide:Personal Protective Equipment}})."),
               (0, "Stay within your authorised area — never enter red or restricted zones without authorisation."),
               (0, "Keep your workplace clean and tidy — 'Clean everything, always.'"),
               (0, "Report every near miss, unsafe act, unsafe condition and incident.")],
