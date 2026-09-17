@@ -171,9 +171,10 @@ def _md_fragment(md, size, rtl=False):
 class FlowReport:
     """Portrait RTL report with measured blocks and fully controlled tables."""
 
-    def __init__(self, path, rtl=True):
+    def __init__(self, path, rtl=True, footer="KAZ-EHS-REV-2026-001  |  Rev. 01  |  Restricted"):
         self.path = path
         self.rtl = rtl
+        self.footer = footer
         self.doc = pymupdf.open()
         self.W, self.H = pymupdf.paper_size("a4")
         self.ml, self.mt, self.mr, self.mb = 34, 40, 34, 46
@@ -326,7 +327,7 @@ class FlowReport:
         total = self.doc.page_count
         for i, pg in enumerate(self.doc):
             pg.insert_text(pymupdf.Point(self.ml, self.H - 22),
-                           "KAZ-EHS-REV-2026-001  |  Rev. 01  |  Restricted", fontname="helv",
+                           self.footer, fontname="helv",
                            fontsize=7, color=(0.35, 0.45, 0.55))
             pg.insert_text(pymupdf.Point(self.W - self.mr - 88, self.H - 22),
                            f"Page {i + 1} of {total}", fontname="helv", fontsize=7, color=(0.35, 0.45, 0.55))
@@ -335,10 +336,10 @@ class FlowReport:
         self.doc.close()
 
 
-def build_report(src, dst):
+def build_report(src, dst, footer="KAZ-EHS-REV-2026-001  |  Rev. 01  |  Restricted"):
     md = open(src, encoding="utf-8").read()
     md = re.sub(r"^---$", "", md, flags=re.M)
-    rep = FlowReport(dst, rtl=True)
+    rep = FlowReport(dst, rtl=True, footer=footer)
     rep.render_markdown(md)
     rep.close()
 
