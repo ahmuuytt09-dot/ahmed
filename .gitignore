@@ -1,0 +1,10 @@
+# Generated artifacts (rebuild with: python3 tools/build_ms_night_concrete_pour.py
+#                                   python3 tools/docx_to_preview.py)
+preview/
+tools/_ms_tmp.docx
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+~$*
+*.tmp
