@@ -1949,49 +1949,48 @@ def section_13(doc):
 
 def section_14(doc):
     heading(doc, "SECTION 14: SIGN-OFF & APPROVAL MATRIX")
-    subheading(doc, "14.1  Document Preparation, Review & Approval", space_before=60)
-    prepared = ("Name: Ahmed Mansoor\nRole: EHS Manager (Siemens Energy)\n"
-                "Company: Siemens Energy\nStatus: Prepared\nDate: ____ / ____ / 2026\n\n"
-                "Signature: ______________________")
-    reviewed = ("Name: Dogukan Arandi\nRole: EHS / Site EHS Lead (Reviewer)\n"
-                "Company: Siemens Energy\nStatus: Under Review\nDate: ____ / ____ / 2026\n\n"
-                "Signature: ______________________")
-    approved = ("Name: Onur Ozvatan\nRole: Project Manager\n"
-                "Company: Siemens Energy\nStatus: For Approval\nDate: ____ / ____ / 2026\n\n"
-                "Signature: ______________________")
-    sitemgr = ("Name: ______________________\nRole: Site Manager\n"
-               "Company: Siemens Energy\nStatus: For Signature\n"
-               "Date: ____ / ____ / 2026\n\n"
-               "Signature: ______________________")
-    rows = [["PREPARED BY", "REVIEWED BY", "SITE MANAGER", "APPROVED BY"],
-            [prepared, reviewed, sitemgr, approved]]
-    grid(doc, [2466, 2466, 2466, 2466], rows, size=9, header_size=10,
-         aligns=["c", None, None, None], total=USABLE_P, zebra=False)
-
-    subheading(doc, "14.2  Site Management & Concrete Subcontractor Sign-Off",
-               space_before=170)
+    subheading(doc, "14.1  Siemens Energy Sign-Off (two signatures only)",
+               space_before=60)
     body(doc,
-         "This Method Statement is not valid for execution until it is signed below by "
-         "the Site Manager and by the authorized representative of the concrete pouring "
-         "subcontractor. The subcontractor's signature confirms that it has read the "
-         "document, will provide every resource and control it requires \u2014 including the "
-         "dedicated night crew, certified pump operator, standby ambulance and medic \u2014 "
-         "and will not start any night pour without the signed Night Pour Readiness "
-         "Checklist (Section 11).", size=10, space_after=90)
+         "The Siemens Energy sign-off for this Method Statement consists of exactly "
+         "two signatures: the EHS Manager and the Site Manager. No other Siemens Energy "
+         "signature is required for release. Subcontractor, supplier and client "
+         "acknowledgements are recorded separately in Section 14.2 and are not part of "
+         "the Siemens Energy sign-off.", size=10, space_after=90)
+    ehs = ("Name: Ahmed Mansoor\nRole: EHS Manager\nCompany: Siemens Energy\n"
+           "Status: For Signature\nDate: ____ / ____ / 2026\n\n"
+           "Signature: ______________________\n\n"
+           "Stamp / Seal: ______________________")
+    site = ("Name: ______________________\nRole: Site Manager\nCompany: Siemens Energy\n"
+            "Status: For Signature\nDate: ____ / ____ / 2026\n\n"
+            "Signature: ______________________\n\n"
+            "Stamp / Seal: ______________________")
+    rows = [["EHS MANAGER  (Siemens Energy)", "SITE MANAGER  (Siemens Energy)"],
+            [ehs, site]]
+    grid(doc, [4932, 4932], rows, size=10, header_size=11,
+         aligns=["c", None], total=USABLE_P, zebra=False)
+
+    subheading(doc, "14.2  Subcontractor, Supplier & Client Acknowledgement "
+                    "(separate from the Siemens Energy sign-off)", space_before=170)
+    body(doc,
+         "This Method Statement is not valid for execution until the authorized "
+         "representative of the concrete pouring subcontractor has signed below. The "
+         "subcontractor's signature confirms that it has read the document, will provide "
+         "every resource and control it requires \u2014 including the dedicated night crew, "
+         "certified pump operator, standby ambulance and medic \u2014 and will not start any "
+         "night pour without the signed Night Pour Readiness Checklist (Section 11).",
+         size=10, space_after=90)
     rows = [["Role / Entity", "Name", "Company", "Signature", "Date", "Stamp / Seal"]]
     signatories = [
-        "Site Manager (Siemens Energy)",
-        "Construction Manager / Night Shift In-Charge",
         "Concrete Pouring Subcontractor \u2014 Authorized Representative",
         "Concrete Pouring Subcontractor \u2014 Site Supervisor / Permit Holder",
         "Concrete Pouring Subcontractor \u2014 EHS Officer",
         "Concrete Pump Supplier \u2014 Authorized Representative",
         "Ready-Mix Concrete Supplier \u2014 Authorized Representative",
-        "Night EHS Officer (dedicated night shift)",
         "Client / Area Authority (MOE-BGC) \u2014 Acknowledgement (where required)",
     ]
-    for s in signatories:
-        rows.append([s, "", "", "", "", ""])
+    for sg in signatories:
+        rows.append([sg, "", "", "", "", ""])
     grid(doc, [2600, 1600, 1500, 1900, 1100, 1164], rows, size=9.5, header_size=9,
          aligns=[None, None, None, None, "c", "c"], bolds=[0], total=USABLE_P)
     spacer(doc, 60)
@@ -2010,8 +2009,9 @@ def section_14(doc):
                  "First issue for review \u2014 Method Statement for Night Concrete Pouring "
                  "Operations, incorporating the comprehensive night-shift EHS requirements "
                  "(Sections 9.1\u20139.7) and the JSA risk assessment matrix (Section 10). "
-                 "Sign-off includes the Site Manager and the concrete pouring "
-                 "subcontractor (Section 14.2).",
+                 "Siemens Energy sign-off is limited to the EHS Manager and the Site "
+                 "Manager (Section 14.1); subcontractor and supplier acknowledgement is "
+                 "recorded in Section 14.2.",
                  "AM", "", ""])
     for _ in range(3):
         rows.append(["", "", "", "", "", ""])
