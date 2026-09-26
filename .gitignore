@@ -1,0 +1,17 @@
+# Build artifacts that must NOT be committed
+tools/_ms_tmp.docx
+__pycache__/
+*.pyc
+
+# NOTE: preview/index.html IS committed on purpose.
+# It is a generated artifact, but the sandbox drops untracked/ignored files on
+# every snapshot restore, which made the live preview disappear each turn.
+# Committing it (442 KB) keeps the preview server startable immediately.
+# Regenerate + recommit after any document change:
+#   python3 tools/build_ms_night_concrete_pour.py && python3 tools/docx_to_preview.py
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+~$*
+*.tmp
