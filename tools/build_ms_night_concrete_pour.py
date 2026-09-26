@@ -203,16 +203,30 @@ def para(doc, space_after=90, space_before=0, align=None, keep_next=False,
     return p
 
 
+BULLET_CHARS = ("\u2022", "\u25aa", "\u25e6", "\u2013")   # • ▪ ◦ –
+HANG = 200                                              # hanging indent (twips)
+
+
 def cell_text(cell, text, size=10, bold=False, colour=BODY, align=None,
-              space_after=20, font="Calibri"):
-    """Write (possibly multi-line) text into a cell, replacing its paragraph."""
+              space_after=20, font="Calibri", valign=None):
+    """Write (possibly multi-line) text into a cell, replacing its paragraph.
+
+    Consistency rules applied to every cell in the document:
+      * bullet lines (• ▪) get an identical hanging indent so wrapped text lines up;
+      * multi-line cells get slightly more leading than single-line cells;
+      * vertical alignment defaults to TOP, or CENTER for header / short
+        centred columns so baselines line up across a row.
+    """
+    lines = str(text).split("\n")
+    multi = len(lines) > 1
+    gap = max(space_after, 34) if multi else space_after
     cell.text = ""
     first = True
-    for line in str(text).split("\n"):
+    for line in lines:
         p = cell.paragraphs[0] if first else cell.add_paragraph()
         first = False
         pf = p.paragraph_format
-        pf.space_after = Pt(space_after / 20.0)
+        pf.space_after = Pt(gap / 20.0)
         pf.space_before = Pt(0)
         if align == "c":
             pf.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -220,11 +234,12 @@ def cell_text(cell, text, size=10, bold=False, colour=BODY, align=None,
             pf.alignment = WD_ALIGN_PARAGRAPH.RIGHT
         elif align == "j":
             pf.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-        if line.startswith("\u2022"):
-            pf.left_indent = Twips(150)
-            pf.first_line_indent = Twips(-150)
+        if line[:1] in BULLET_CHARS:
+            pf.left_indent = Twips(HANG)
+            pf.first_line_indent = Twips(-HANG)
         run(p, line, size=size, bold=bold, colour=colour, font=font)
-    cell.vertical_alignment = WD_ALIGN_VERTICAL.TOP
+    cell.vertical_alignment = (WD_ALIGN_VERTICAL.CENTER if valign == "c"
+                              else WD_ALIGN_VERTICAL.TOP)
 
 
 def heading(doc, text, size=12.5, colour=TEAL_DARK, space_before=260,
@@ -340,12 +355,16 @@ def grid(doc, widths, rows, header=True, header_fill=TEAL_MID, zebra=True,
             if fill:
                 shade(cell, fill)
             al = "c" if is_head else (aligns[ci] if aligns else None)
+            # vertical centring: always for header rows, and for any body column
+            # that is horizontally centred (numbers, ticks, initials, ratings)
+            va = "c" if (is_head or al == "c") else None
             cell_text(
                 cell, val,
                 size=header_size if is_head else size,
                 bold=is_head or (ci in bolds),
                 colour=header_colour if is_head else BODY,
                 align=al,
+                valign=va,
             )
     spacer(doc, 80)
     return t
@@ -381,6 +400,7 @@ def numbered(doc, items, size=10.5, left=360, space_after=60, bold_lead=True):
 def rating_cell(table, r, c, rating, score, size=10):
     cell = table.cell(r, c)
     cell.text = ""
+    cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
     p = cell.paragraphs[0]
     p.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.CENTER
     p.paragraph_format.space_after = Pt(0)
@@ -690,6 +710,11 @@ def section_3(doc):
          "working, confirms the dedicated night-shift resources (crew, EHS officer, "
          "ambulance, medic, lighting) are funded and mobilized, and is notified of any "
          "Stop-Work event."),
+        ("Site Manager",
+         "Overall site authority for the project. Confirms that the night pour is "
+         "resourced and that this Method Statement is implemented; signs the document "
+         "authorisation (Section 14.2) and is notified of every Stop-Work event, "
+         "incident and aborted pour."),
         ("Site / Construction Manager (Night Shift In-Charge)",
          "Single point of operational command for the night shift. Confirms the shift "
          "handover, authorises the pour sequence, appoints the Spotter and Banksman, "
@@ -1733,7 +1758,10 @@ def section_11(doc):
             ["Dedicated Night EHS Officer", "", "", ""],
             ["Permit Issuer (Siemens Energy)", "", "", ""],
             ["Area Authority (client / operations, where applicable)", "", "", ""],
-            ["Night Shift In-Charge / Construction Manager", "", "", ""]]
+            ["Night Shift In-Charge / Construction Manager", "", "", ""],
+            ["Site Manager (Siemens Energy)", "", "", ""],
+            ["Concrete Pouring Subcontractor \u2014 Authorized Representative", "", "", ""],
+            ["Concrete Pouring Subcontractor \u2014 Site Supervisor / Permit Holder", "", "", ""]]
     grid(doc, [4200, 2200, 2200, 1264], rows, size=9.5, header_size=9.5,
          bolds=[0], total=USABLE_P)
 
@@ -1886,6 +1914,7 @@ def section_13(doc):
 
 def section_14(doc):
     heading(doc, "SECTION 14: SIGN-OFF & APPROVAL MATRIX")
+    subheading(doc, "14.1  Document Preparation, Review & Approval", space_before=60)
     prepared = ("Name: Ahmed Mansoor\nRole: EHS Manager (Siemens Energy)\n"
                 "Company: Siemens Energy\nStatus: Prepared\nDate: ____ / ____ / 2026\n\n"
                 "Signature: ______________________")
@@ -1899,9 +1928,36 @@ def section_14(doc):
             [prepared, reviewed, approved]]
     grid(doc, [3288, 3288, 3288], rows, size=9.5, header_size=10,
          aligns=["c", None, None], total=USABLE_P, zebra=False)
-    spacer(doc, 100)
 
-    subheading(doc, "14.1  Night-Pour Authorisation per Shift (in addition to the PTW)")
+    subheading(doc, "14.2  Site Management & Concrete Subcontractor Sign-Off",
+               space_before=170)
+    body(doc,
+         "This Method Statement is not valid for execution until it is signed below by "
+         "the Site Manager and by the authorized representative of the concrete pouring "
+         "subcontractor. The subcontractor's signature confirms that it has read the "
+         "document, will provide every resource and control it requires \u2014 including the "
+         "dedicated night crew, certified pump operator, standby ambulance and medic \u2014 "
+         "and will not start any night pour without the signed Night Pour Readiness "
+         "Checklist (Section 11).", size=10, space_after=90)
+    rows = [["Role / Entity", "Name", "Company", "Signature", "Date", "Stamp / Seal"]]
+    signatories = [
+        "Site Manager (Siemens Energy)",
+        "Construction Manager / Night Shift In-Charge",
+        "Concrete Pouring Subcontractor \u2014 Authorized Representative",
+        "Concrete Pouring Subcontractor \u2014 Site Supervisor / Permit Holder",
+        "Concrete Pouring Subcontractor \u2014 EHS Officer",
+        "Concrete Pump Supplier \u2014 Authorized Representative",
+        "Ready-Mix Concrete Supplier \u2014 Authorized Representative",
+        "Night EHS Officer (dedicated night shift)",
+        "Client / Area Authority (MOE-BGC) \u2014 Acknowledgement (where required)",
+    ]
+    for s in signatories:
+        rows.append([s, "", "", "", "", ""])
+    grid(doc, [2600, 1600, 1500, 1900, 1100, 1164], rows, size=9.5, header_size=9,
+         aligns=[None, None, None, None, "c", "c"], bolds=[0], total=USABLE_P)
+    spacer(doc, 60)
+
+    subheading(doc, "14.3  Night-Pour Authorisation per Shift (in addition to the PTW)")
     rows = [["Shift / Date", "Night Shift In-Charge", "Night EHS Officer", "Permit Issuer / AA",
              "Pour Authorised? (Yes/No)"]]
     for _ in range(4):
@@ -1909,12 +1965,14 @@ def section_14(doc):
     grid(doc, [1900, 2100, 2000, 2200, 1664], rows, size=9.5, header_size=9,
          aligns=[None] * 5, total=USABLE_P)
 
-    subheading(doc, "14.2  Revision History")
+    subheading(doc, "14.4  Revision History")
     rows = [["Rev.", "Date", "Description of Change", "Prepared", "Reviewed", "Approved"]]
     rows.append(["0", "____ / ____ / 2026",
                  "First issue for review \u2014 Method Statement for Night Concrete Pouring "
                  "Operations, incorporating the comprehensive night-shift EHS requirements "
-                 "(Sections 9.1\u20139.7) and the JSA risk assessment matrix (Section 10).",
+                 "(Sections 9.1\u20139.7) and the JSA risk assessment matrix (Section 10). "
+                 "Sign-off includes the Site Manager and the concrete pouring "
+                 "subcontractor (Section 14.2).",
                  "AM", "", ""])
     for _ in range(3):
         rows.append(["", "", "", "", "", ""])

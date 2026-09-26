@@ -162,6 +162,9 @@ def main():
 
     header_txt, footer_txt = strip(hdr), strip(ftr)
 
+    from urllib.parse import quote
+    DOCX_NAME_QUOTED = quote(os.path.basename(DOCX))
+
     doc = f"""<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -198,11 +201,15 @@ table.t td{{border:1px solid var(--border);padding:4px 6px;vertical-align:top;
  font-size:12px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}}
 .bar b{{color:#00B5E2}}
 .bar .m{{opacity:.8;font-size:11px}}
+.bar .dl{{display:inline-block;margin-left:10px;background:#00B5E2;color:#003B4A;
+ font-weight:700;padding:4px 12px;border-radius:12px;text-decoration:none;font-size:11px}}
+.bar .dl:hover{{background:#fff}}
 .note{{background:#FFF8E1;border-left:4px solid #BF8F00;padding:10px 14px;margin:0 auto 18px;
  font-size:12px;max-width:1140px;border-radius:2px}}
 </style></head><body>
 <div class="bar"><div><b>KAZ-EHS-MS-2026-004</b> &nbsp;Method Statement — Night Concrete Pouring Operations</div>
-<div class="m">HTML preview of the generated .docx · {len(out)} body elements</div></div>
+<div class="m">HTML preview of the generated .docx · {len(out)} body elements
+ &nbsp;<a class="dl" href="../{DOCX_NAME_QUOTED}" download>⬇ Download the .docx</a></div></div>
 <div class="note">This is a browser preview of <b>MS-KAZ-EHS-MS-2026-004_Night Concrete Pouring (Rev.0).docx</b>.
 The Word file is the deliverable — it carries the exact house styling, page numbering fields,
 landscape JSA section and print margins. Preview colours/widths are approximate.</div>
