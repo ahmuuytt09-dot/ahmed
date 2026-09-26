@@ -21,10 +21,10 @@ import zipfile
 from docx import Document
 from docx.enum.section import WD_ORIENT, WD_SECTION
 from docx.enum.table import WD_ALIGN_VERTICAL
-from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_TAB_ALIGNMENT
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
-from docx.shared import Pt, RGBColor, Twips
+from docx.shared import Inches, Pt, RGBColor, Twips
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(HERE)
@@ -57,6 +57,9 @@ HEADER_RIGHT = f"{DOC_ID}  \u2022  Rev. {REV}  \u2022  Night Concrete Pouring"
 
 USABLE_P = 9864           # A4 portrait usable width (twips), as per house doc
 USABLE_L = 14398          # A4 landscape usable width (twips)
+LOGO = os.path.join(REPO, "tools", "assets", "siemens_energy_logo.png")
+LOGO_W_HDR = Inches(0.62)     # small logo in the running header
+LOGO_W_BANNER = Inches(1.45)  # logo on the cover band
 
 RATING_COLOUR = {"H": "C00000", "M": "BF8F00", "L": "2E7D32"}
 RATING_WORD = {"H": "HIGH", "M": "MEDIUM", "L": "LOW"}
@@ -471,7 +474,40 @@ def build_footer(sec):
 
 
 # ===================================================================== CONTENT
-def banner(doc):
+def logo_band(doc, doc_id, rev, status):
+    """White band carrying the Siemens Energy logo + project meta (every doc)."""
+    t = doc.add_table(rows=1, cols=2)
+    t.autofit = False
+    fixed_layout(t)
+    set_grid_exact(t, [2600, USABLE_P - 2600])
+    lc = t.cell(0, 0)
+    shade(lc, WHITE)
+    set_cell_margins(lc, top=110, bottom=110, left=60, right=60)
+    lc.text = ""
+    p = lc.paragraphs[0]
+    p.paragraph_format.space_after = Pt(0)
+    p.add_run().add_picture(LOGO, width=LOGO_W_BANNER)
+    rc = t.cell(0, 1)
+    shade(rc, WHITE)
+    set_cell_margins(rc, top=110, bottom=110, left=60, right=60)
+    rc.text = ""
+    lines = [
+        ("KAZ Power Plant Upgrade Project", 10, True, TEAL_DARK),
+        ("Khur Al-Zubair Power Station \u2014 Basra, Iraq", 8.5, False, BODY),
+        (f"{doc_id}   \u2022   Rev. {rev}   \u2022   {status}", 8, False, TEAL_MID),
+    ]
+    for i, (txt_, sz, bd, col) in enumerate(lines):
+        pp = rc.paragraphs[0] if i == 0 else rc.add_paragraph()
+        pp.paragraph_format.space_after = Pt(1)
+        pp.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+        run(pp, txt_, size=sz, bold=bd, colour=col)
+    spacer(doc, 40)
+    return t
+
+
+def banner(doc, kind, title, subtitle, doc_id, rev,
+           status="DRAFT FOR REVIEW (Pending Final Approval)"):
+    logo_band(doc, doc_id, rev, status)
     t = doc.add_table(rows=1, cols=1)
     t.autofit = False
     fixed_layout(t)
@@ -484,21 +520,20 @@ def banner(doc):
     p = c.paragraphs[0]
     p.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.CENTER
     p.paragraph_format.space_after = Pt(2)
-    run(p, "METHOD STATEMENT", size=19, bold=True, colour=WHITE)
+    run(p, kind, size=19, bold=True, colour=WHITE)
     p2 = c.add_paragraph()
     p2.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.CENTER
     p2.paragraph_format.space_after = Pt(8)
-    run(p2, "NIGHT CONCRETE POURING OPERATIONS", size=13, bold=True, colour=TEAL_CYAN)
+    run(p2, title, size=13, bold=True, colour=TEAL_CYAN)
     p3 = c.add_paragraph()
     p3.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.CENTER
     p3.paragraph_format.space_after = Pt(4)
-    run(p3, "KAZ Power Plant Upgrade Project \u2014 Khur Al-Zubair Power Station, "
-            "Basra, Iraq", size=11, colour=WHITE)
+    run(p3, subtitle, size=11, colour=WHITE)
     p4 = c.add_paragraph()
     p4.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.CENTER
     p4.paragraph_format.space_after = Pt(0)
-    run(p4, f"Document ID: {DOC_ID}   \u2022   Revision: {REV}   \u2022   Status: "
-            "DRAFT FOR REVIEW (Pending Final Approval)", size=9, colour=TEAL_PALE)
+    run(p4, f"Document ID: {doc_id}   \u2022   Revision: {rev}   \u2022   Status: {status}",
+        size=9, colour=TEAL_PALE)
     spacer(doc, 60)
 
 
@@ -1924,10 +1959,14 @@ def section_14(doc):
     approved = ("Name: Onur Ozvatan\nRole: Project Manager\n"
                 "Company: Siemens Energy\nStatus: For Approval\nDate: ____ / ____ / 2026\n\n"
                 "Signature: ______________________")
-    rows = [["PREPARED BY", "REVIEWED BY", "APPROVED BY"],
-            [prepared, reviewed, approved]]
-    grid(doc, [3288, 3288, 3288], rows, size=9.5, header_size=10,
-         aligns=["c", None, None], total=USABLE_P, zebra=False)
+    sitemgr = ("Name: ______________________\nRole: Site Manager\n"
+               "Company: Siemens Energy\nStatus: For Signature\n"
+               "Date: ____ / ____ / 2026\n\n"
+               "Signature: ______________________")
+    rows = [["PREPARED BY", "REVIEWED BY", "SITE MANAGER", "APPROVED BY"],
+            [prepared, reviewed, sitemgr, approved]]
+    grid(doc, [2466, 2466, 2466, 2466], rows, size=9, header_size=10,
+         aligns=["c", None, None, None], total=USABLE_P, zebra=False)
 
     subheading(doc, "14.2  Site Management & Concrete Subcontractor Sign-Off",
                space_before=170)
@@ -2214,145 +2253,105 @@ def annexes(doc):
 
 
 # ======================================================================= BUILD
-def make_shell(tmp_path):
-    """Copy the house document, empty its body and replace the footer text."""
+def make_shell(tmp_path, core_title, core_keywords):
+    """Copy the house document and empty its body (styles/theme are retained)."""
     shutil.copy(SHELL, tmp_path)
     doc = Document(tmp_path)
     body_el = doc.element.body
     for child in list(body_el):
         body_el.remove(child)
-    sectPr = OxmlElement("w:sectPr")
-    body_el.append(sectPr)
+    body_el.append(OxmlElement("w:sectPr"))
     doc.save(tmp_path)
 
-    # rebuild footer part with the new document id text + PAGE / NUMPAGES fields
     zin = zipfile.ZipFile(tmp_path, "r")
-    names = zin.namelist()
-    parts = {n: zin.read(n) for n in names}
+    parts = {n: zin.read(n) for n in zin.namelist()}
     zin.close()
 
-    if "word/footer1.xml" in parts:
-        f = parts["word/footer1.xml"].decode("utf-8")
-        # strip existing paragraph content, keep root element and properties
-        m = re.match(r"^(.*?<w:ftr\b[^>]*>)(.*)(</w:ftr>\s*)$", f, re.S)
-        head, _old, tail = m.group(1), m.group(2), m.group(3)
+    # strip the inherited thumbnail preview (belongs to the PTW template)
+    for n in [n for n in list(parts) if "thumbnail" in n.lower()]:
+        parts.pop(n, None)
+    parts["_rels/.rels"] = re.sub(
+        r"<Relationship[^>]*thumbnail[^>]*/>", "",
+        parts["_rels/.rels"].decode("utf-8"), flags=re.I).encode("utf-8")
 
-        def fld(instr):
-            return (
-                '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/>'
-                '<w:b/><w:color w:val="007E8C"/><w:sz w:val="16"/></w:rPr>'
-                '<w:fldChar w:fldCharType="begin"/></w:r>'
-                '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/>'
-                '<w:b/><w:color w:val="007E8C"/><w:sz w:val="16"/></w:rPr>'
-                f'<w:instrText xml:space="preserve"> {instr} </w:instrText></w:r>'
-                '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/>'
-                '<w:b/><w:color w:val="007E8C"/><w:sz w:val="16"/></w:rPr>'
-                '<w:fldChar w:fldCharType="separate"/></w:r>'
-                '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/>'
-                '<w:b/><w:color w:val="007E8C"/><w:sz w:val="16"/></w:rPr>'
-                '<w:t>1</w:t></w:r>'
-                '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/>'
-                '<w:b/><w:color w:val="007E8C"/><w:sz w:val="16"/></w:rPr>'
-                '<w:fldChar w:fldCharType="end"/></w:r>'
-            )
-
-        def txt(s):
-            return ('<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/>'
-                    f'<w:color w:val="003B4A"/><w:sz w:val="16"/></w:rPr>'
-                    f'<w:t xml:space="preserve">{s}</w:t></w:r>')
-
-        para_xml = (
-            '<w:p><w:pPr><w:pBdr><w:top w:val="single" w:sz="4" w:space="3" '
-            'w:color="B7CCCF"/></w:pBdr><w:spacing w:before="60" w:after="0"/>'
-            '<w:jc w:val="center"/></w:pPr>'
-            + txt(FOOTER_TXT) + fld("PAGE") + txt(" of ") + fld("NUMPAGES")
-            + '</w:p>'
-        )
-        parts["word/footer1.xml"] = (head + para_xml + tail).encode("utf-8")
-
-    # header part (new)
-    header_xml = (
+    parts["docProps/core.xml"] = (
         '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
-        '<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
-        '<w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="4" w:space="3" '
-        'w:color="B7CCCF"/></w:pBdr><w:tabs><w:tab w:val="right" w:pos="9864"/></w:tabs>'
-        '<w:spacing w:before="0" w:after="40"/></w:pPr>'
-        '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:b/>'
-        '<w:color w:val="007E8C"/><w:sz w:val="16"/></w:rPr>'
-        f'<w:t xml:space="preserve">{HEADER_LEFT}</w:t></w:r>'
-        '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/>'
-        '<w:color w:val="222A2E"/><w:sz w:val="16"/></w:rPr>'
-        f'<w:t xml:space="preserve">\t{HEADER_RIGHT}</w:t></w:r>'
-        '</w:p></w:hdr>'
-    )
-    parts["word/header1.xml"] = header_xml.encode("utf-8")
-
-    # relationships: add header, keep footer
-    rels = parts["word/_rels/document.xml.rels"].decode("utf-8")
-    if 'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header"' not in rels:
-        rels = rels.replace(
-            "</Relationships>",
-            '<Relationship Id="rId100" Type="http://schemas.openxmlformats.org/'
-            'officeDocument/2006/relationships/header" Target="header1.xml"/>'
-            "</Relationships>")
-    parts["word/_rels/document.xml.rels"] = rels.encode("utf-8")
-
-    ct = parts["[Content_Types].xml"].decode("utf-8")
-    if 'PartName="/word/header1.xml"' not in ct:
-        ct = ct.replace(
-            "</Types>",
-            '<Override PartName="/word/header1.xml" ContentType="application/vnd.'
-            'openxmlformats-officedocument.wordprocessingml.header+xml"/></Types>')
-    parts["[Content_Types].xml"] = ct.encode("utf-8")
-
-    # core properties
-    if "docProps/core.xml" in parts:
-        core = (
-            '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
-            '<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/'
-            'metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" '
-            'xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/'
-            'XMLSchema-instance">'
-            '<dc:title>Method Statement - Night Concrete Pouring Operations</dc:title>'
-            '<dc:subject>KAZ Power Plant Upgrade Project - Basra, Iraq</dc:subject>'
-            '<dc:creator>Ahmed Mansoor (EHS Manager) - Siemens Energy</dc:creator>'
-            '<cp:keywords>EHS; Method Statement; Night Work; Concrete Pouring; JSA; '
-            'KAZ-EHS-MS-2026-004</cp:keywords>'
-            '<cp:lastModifiedBy>Ahmed Mansoor</cp:lastModifiedBy>'
-            '<cp:category>EHS Document</cp:category>'
-            '</cp:coreProperties>'
-        )
-        parts["docProps/core.xml"] = core.encode("utf-8")
+        '<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/'
+        'metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" '
+        'xmlns:dcterms="http://purl.org/dc/terms/">'
+        f"<dc:title>{core_title}</dc:title>"
+        "<dc:subject>KAZ Power Plant Upgrade Project - Basra, Iraq</dc:subject>"
+        "<dc:creator>Ahmed Mansoor (EHS Manager) - Siemens Energy</dc:creator>"
+        f"<cp:keywords>{core_keywords}</cp:keywords>"
+        "<cp:lastModifiedBy>Ahmed Mansoor</cp:lastModifiedBy>"
+        "<cp:category>EHS Document</cp:category>"
+        "</cp:coreProperties>").encode("utf-8")
+    parts["docProps/app.xml"] = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
+        '<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/'
+        'extended-properties">'
+        "<Application>Microsoft Office Word</Application>"
+        "<Company>Siemens Energy</Company>"
+        "<Manager>Ahmed Mansoor (EHS Manager)</Manager>"
+        "</Properties>").encode("utf-8")
 
     with zipfile.ZipFile(tmp_path, "w", zipfile.ZIP_DEFLATED) as zout:
-        for n in names:
+        for n in parts:
             zout.writestr(n, parts[n])
-        if "word/header1.xml" not in names:
-            zout.writestr("word/header1.xml", parts["word/header1.xml"])
     return tmp_path
 
 
-def link_header_footer(sec, first=False):
-    """Attach header1.xml / footer1.xml to a section via raw sectPr manipulation."""
-    sectPr = sec._sectPr
-    # remove existing refs
-    for tag in ("w:headerReference", "w:footerReference"):
-        for el in sectPr.findall(qn(tag)):
-            sectPr.remove(el)
-    for tag, rid in (("w:headerReference", "rId100"), ("w:footerReference", "rId9")):
-        el = OxmlElement(tag)
-        el.set(qn("w:type"), "default")
-        el.set(qn("r:id"), rid)
-        sectPr.insert(0, el)
+def _style_field_run(r):
+    r.font.size = Pt(8)
+    r.font.name = "Calibri"
+    r.font.bold = True
+    rpr = r._r.get_or_add_rPr()
+    rpr.append(_el("w:color", w_val=TEAL_MID))
+
+
+def apply_header_footer(doc, doc_id, rev):
+    """Running header (Siemens Energy logo + project + doc id) and footer with
+    live PAGE / NUMPAGES fields, applied to every section."""
+    for sec in doc.sections:
+        wide = USABLE_L if sec.orientation == WD_ORIENT.LANDSCAPE else USABLE_P
+        hdr = sec.header
+        hdr.is_linked_to_previous = False
+        hp = hdr.paragraphs[0]
+        hp.text = ""
+        pf = hp.paragraph_format
+        pf.space_before = Pt(0)
+        pf.space_after = Pt(3)
+        pf.tab_stops.clear_all()
+        pf.tab_stops.add_tab_stop(Twips(wide), WD_TAB_ALIGNMENT.RIGHT)
+        hp.add_run().add_picture(LOGO, width=LOGO_W_HDR)
+        run(hp, "   " + HEADER_LEFT, size=8, colour=TEAL_MID, bold=True)
+        run(hp, "\t" + f"{doc_id}  \u2022  Rev. {rev}", size=8, colour=BODY)
+        para_border(hp, colour=BORDER, sz=4)
+
+        ftr = sec.footer
+        ftr.is_linked_to_previous = False
+        fp = ftr.paragraphs[0]
+        fp.text = ""
+        fp.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        fp.paragraph_format.space_before = Pt(3)
+        run(fp, f"{doc_id}  \u2022  Rev. {rev}  \u2022  Siemens Energy \u2013 KAZ "
+                "Power Plant Upgrade  \u2022  Page ", size=8, colour=TEAL_DARK)
+        for r in add_field(fp, "PAGE"):
+            _style_field_run(r)
+        run(fp, " of ", size=8, colour=TEAL_DARK)
+        for r in add_field(fp, "NUMPAGES"):
+            _style_field_run(r)
+        para_border(fp, colour=BORDER, sz=4, edge="top")
 
 
 def main():
-    make_shell(TMP)
+    make_shell(TMP, "Method Statement - Night Concrete Pouring Operations", "EHS; Method Statement; Night Work; Concrete Pouring; JSA; KAZ-EHS-MS-2026-004")
     doc = Document(TMP)
     sec0 = doc.sections[0]
     setup_section(sec0, landscape=False)
 
-    banner(doc)
+    banner(doc, "METHOD STATEMENT", "NIGHT CONCRETE POURING OPERATIONS",
+           "KAZ Power Plant Upgrade Project \u2014 Khur Al-Zubair Power Station, Basra, Iraq", DOC_ID, REV)
     section_0(doc)
     section_1(doc)
     section_2(doc)
@@ -2403,66 +2402,49 @@ def main():
     section_15(doc)
     annexes(doc)
 
-    for sec in doc.sections:
-        link_header_footer(sec)
-
-    # ensure rId9 (footer) exists; if the shell used a different id, fix it
+    apply_header_footer(doc, DOC_ID, REV)
     doc.save(TMP)
-    fix_rel_ids(TMP)
     shutil.move(TMP, OUT)
+    prune_orphans(OUT)
     print("WROTE:", OUT)
 
 
-def fix_rel_ids(path):
-    """Guarantee header/footer rel ids, and strip the template's stale thumbnail
-    and app.xml leftovers inherited from the shell document."""
+def prune_orphans(path):
+    """Remove header/footer parts left over from the template shell that are no
+    longer referenced by any section (prevents stray parts in the package)."""
     zin = zipfile.ZipFile(path, "r")
-    names = zin.namelist()
-    parts = {n: zin.read(n) for n in names}
+    parts = {n: zin.read(n) for n in zin.namelist()}
     zin.close()
-
-    # --- drop the inherited thumbnail preview (belongs to the PTW template) ---
-    drop = {n for n in parts if "thumbnail" in n.lower()}
-    for n in drop:
-        parts.pop(n, None)
-    root_rels = parts["_rels/.rels"].decode("utf-8")
-    root_rels = re.sub(r'<Relationship[^>]*thumbnail[^>]*/>', "", root_rels, flags=re.I)
-    parts["_rels/.rels"] = root_rels.encode("utf-8")
-
-    # --- neutralise app.xml (template metadata) ---
-    if "docProps/app.xml" in parts:
-        parts["docProps/app.xml"] = (
-            '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
-            '<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/'
-            'extended-properties" xmlns:vt="http://schemas.openxmlformats.org/'
-            'officeDocument/2006/docPropsVTypes">'
-            '<Application>Microsoft Office Word</Application>'
-            '<Company>Siemens Energy</Company>'
-            '<Manager>Ahmed Mansoor (EHS Manager)</Manager>'
-            '</Properties>'
-        ).encode("utf-8")
-
+    doc = parts["word/document.xml"].decode("utf-8")
+    referenced = set(re.findall(r'r:id="(rId\d+)"', doc))
     rels = parts["word/_rels/document.xml.rels"].decode("utf-8")
-
-    def ensure(rels, rid, target, rel_type):
-        if f'Id="{rid}"' in rels:
-            rels = re.sub(rf'<Relationship Id="{rid}"[^>]*/>',
-                          f'<Relationship Id="{rid}" Type="{rel_type}" Target="{target}"/>',
-                          rels)
-        else:
-            rels = rels.replace(
-                "</Relationships>",
-                f'<Relationship Id="{rid}" Type="{rel_type}" Target="{target}"/></Relationships>')
-        return rels
-
-    rels = ensure(rels, "rId9", "footer1.xml",
-                  "http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer")
-    rels = ensure(rels, "rId100", "header1.xml",
-                  "http://schemas.openxmlformats.org/officeDocument/2006/relationships/header")
+    drop_parts, keep = [], []
+    for m in re.finditer(r'<Relationship Id="(rId\d+)" Type="[^"]*/(header|footer)" '
+                         r'Target="([^"]+)"\s*/>', rels):
+        rid, kind, target = m.group(1), m.group(2), m.group(3)
+        if rid not in referenced:
+            drop_parts.append("word/" + target)
+            rels = rels.replace(m.group(0), "")
     parts["word/_rels/document.xml.rels"] = rels.encode("utf-8")
+    ct = parts["[Content_Types].xml"].decode("utf-8")
+    for p in drop_parts:
+        parts.pop(p, None)
+        ct = ct.replace(
+            f'<Override PartName="/{p}" ContentType="application/vnd.'
+            f'openxmlformats-officedocument.wordprocessingml.{p.split("/")[-1][:6]}'
+            f'...PLACEHOLDER"/>', "")
+    # remove Overrides for missing parts generically
+    for m in list(re.finditer(r'<Override PartName="(/word/(?:header|footer)\d+\.xml)"'
+                              r'[^>]*/>', ct)):
+        part = m.group(1).lstrip("/")
+        if part not in parts:
+            ct = ct.replace(m.group(0), "")
+    parts["[Content_Types].xml"] = ct.encode("utf-8")
     with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as zout:
-        for n in parts:
-            zout.writestr(n, parts[n])
+        for n, b in parts.items():
+            zout.writestr(n, b)
+    return drop_parts
+
 
 
 if __name__ == "__main__":
