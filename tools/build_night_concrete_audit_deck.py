@@ -316,7 +316,7 @@ def add_cover(prs):
     add_text(slide, "Ahmed Al-Mansoury", 4.32, 5.68, 2.35, 0.23, 11.0, WHITE, True)
     add_text(slide, "EHS Manager", 4.32, 5.96, 2.35, 0.18, 8.0, MUTED, False)
     add_text(slide, "FOR MANAGEMENT REVIEW  •  INSERT FIELD PHOTOS BEFORE ISSUE", 0.64, 6.87, 7.8, 0.18, 7.0, MUTED_2, True, char_spacing=55)
-    add_text(slide, "01 / 10", 11.13, 6.86, 1.07, 0.18, 7.0, MUTED_2, True, align=PP_ALIGN.RIGHT, char_spacing=80)
+    add_text(slide, "01 / 11", 11.13, 6.86, 1.07, 0.18, 7.0, MUTED_2, True, align=PP_ALIGN.RIGHT, char_spacing=80)
     return slide
 
 
@@ -345,8 +345,9 @@ def add_summary(prs):
         ("05", "Driver licensing & competency", "CRITICAL", "Transport Contractor", "Before site entry"),
         ("06", "Concrete waste disposal", "HIGH", "Environmental Lead", "Same shift"),
         ("07", "Lighting cable joints", "HIGH", "Electrical Contractor", "Before night work"),
+        ("08", "Vibrator moved while operating", "HIGH", "Concrete Subcontractor", "Immediate / next pour"),
     ]
-    row_h = 0.47
+    row_h = 0.40
     for i, row in enumerate(rows):
         y = y0 + 0.43 + i * row_h
         fill = PANEL if i % 2 == 0 else BG_ALT
@@ -446,6 +447,11 @@ def add_all_findings(prs):
         "RISK", "Low-light conditions amplify both electric shock and trip potential at the workface.",
         "Repair and properly insulate all joints using industrial-grade weather-proof connectors.",
         "Exposed cable joint", "HIGH", RED, "Electrical Contractor", "Before night work")
+    add_observation_slide(prs, 8, "Manual Movement of an Operating Concrete Vibrator",
+        "Workers were observed manually moving the handheld concrete vibrator while it remained switched on and operating.",
+        "KEY QUESTION", "Is manual movement of an operating vibrator acceptable without a stop–move–restart control?",
+        "Stop the vibrator before relocation or handover. Apply a controlled stop–move–restart procedure and brief all operators.",
+        "Vibrator being moved while operating", "HIGH", RED, "Concrete Subcontractor / Supervisor", "Immediate / before next pour")
 
 
 def build_deck():
